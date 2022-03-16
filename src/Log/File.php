@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @document https://doc.szwtdl.cn
  * @license  https://github.com/wtdl-swoole/wtdl/blob/master/LICENSE
  */
-namespace Wtdl\Framework\Log;
+namespace Szwtdl\Framework\Log;
 
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;

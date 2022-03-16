@@ -9,7 +9,7 @@ declare(strict_types=1);
  * @license  https://github.com/wtdl-swoole/wtdl/blob/master/LICENSE
  */
 
-namespace Wtdl\Server;
+namespace Szwtdl\Framework\Server;
 
 use Swoole\Coroutine;
 use Swoole\Coroutine\System;
@@ -18,11 +18,11 @@ use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server;
 use Swoole\Server as HttpServer;
-use Wtdl\Application;
-use Wtdl\Context;
-use Wtdl\Listener;
-use Wtdl\Route;
-use Wtdl\SimpleRoute;
+use Szwtdl\Framework\Application;
+use Szwtdl\Framework\Context;
+use Szwtdl\Framework\Listener;
+use Szwtdl\Framework\Route;
+use Szwtdl\Framework\SimpleRoute;
 
 class Http
 {
@@ -49,13 +49,11 @@ class Http
 
     public function onManagerStart(HttpServer $server)
     {
-        echo "xxxx{$workerId}xxxxxxxx\n";
         Listener::getInstance()->listen('managerStart', $server);
     }
 
     public function onWorkerStart(HttpServer $server, int $workerId)
     {
-        var_dump(get_included_files());
         $this->_route = Route::getInstance();
         Listener::getInstance()->listen('workerStart', $server, $workerId);
     }

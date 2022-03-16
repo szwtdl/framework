@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 /**
  * 深圳网通动力网络技术有限公司
  * This file is part of wtdl-Shop.
@@ -8,7 +9,8 @@ declare(strict_types=1);
  * @document https://doc.szwtdl.cn
  * @license  https://github.com/wtdl-swoole/wtdl/blob/master/LICENSE
  */
-use Wtdl\Context;
+
+use Szwtdl\Framework\Context;
 
 /**
  * @param mixed $data
@@ -19,29 +21,30 @@ function dd($data)
     print_r($data);
 }
 
-if (! function_exists('getInstance')) {
+if (!function_exists('getInstance')) {
     function getInstance($class)
     {
         return ($class)::getInstance();
     }
 }
 
-if (! function_exists('config')) {
+if (!function_exists('config')) {
     function config($name, $default = null)
     {
-        return getInstance('\Wtdl\Config')->get($name, $default);
+        return getInstance('\Szwtdl\Framework\Config')->get($name, $default);
     }
 }
 
-if (! function_exists('shop_error')) {
-    function shop_error()
+if (!function_exists('framework_error')) {
+    function framework_error()
     {
+        $response = Context::get('response');
         try {
-            echo "xxxx shop error\n";
+            $response->status(500);
+            $response->end('error 500');
         } catch (Throwable $exception) {
-            $response = Context::get('response');
-            $response->end('error shop');
-            return $response;
+            $response->end('error Throwable' . $exception->getMessage());
         }
+        return $response;
     }
 }

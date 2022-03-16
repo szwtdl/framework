@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @document https://doc.szwtdl.cn
  * @license  https://github.com/wtdl-swoole/wtdl/blob/master/LICENSE
  */
-namespace Wtdl;
+namespace Szwtdl\Framework;
 
 use FastRoute\Dispatcher;
 use function FastRoute\simpleDispatcher;

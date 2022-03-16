@@ -1,4 +1,6 @@
 /vendor
 /.idea
+/tests
 .composer.lock
 .php-fix-fixer.php
+phpunit.xml.dist

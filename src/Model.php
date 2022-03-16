@@ -6,7 +6,7 @@
  * Time: 11:35 上午
  */
 
-namespace Wtdl;
+namespace Szwtdl\Framework;
 
 
 abstract class Model

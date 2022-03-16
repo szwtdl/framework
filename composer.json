@@ -1,5 +1,5 @@
 {
-    "name": "szwtdl/wtdl-swoole",
+    "name": "szwtdl/framework",
     "description": "Wtdl framework",
     "type": "library",
     "license": "Apache-2.0",
@@ -12,16 +12,18 @@
     "require": {
         "php": ">=7.2",
         "ext-swoole": ">=4.4",
-        "phpunit/phpunit": "^9.5",
         "monolog/monolog": "^2.3",
         "psr/http-message": "^1.0",
-        "nikic/fast-route": "^1.3",
+        "nikic/fast-route": "^1.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
         "friendsofphp/php-cs-fixer": "^3.4",
         "swoole/ide-helper": "^4.8"
     },
     "autoload": {
         "psr-4": {
-            "Wtdl\\": "src/",
+            "Szwtdl\\Framework\\": "src/",
             "Tests\\": "tests/"
         },
         "files": [

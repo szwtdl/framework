@@ -9,10 +9,10 @@ declare(strict_types=1);
  * @license  https://github.com/wtdl-swoole/wtdl/blob/master/LICENSE
  */
 
-namespace Wtdl;
+namespace Szwtdl\Framework;
 
-use Wtdl\Server\Http;
-use Wtdl\Server\WebSocket;
+use Szwtdl\Framework\Server\Http;
+use Szwtdl\Framework\Server\WebSocket;
 
 class Application
 {
@@ -85,4 +85,6 @@ class Application
                 self::echoError("use {$argv[0]} [http:start, ws:start, mqtt:start, main:start]");
         }
     }
+
+
 }

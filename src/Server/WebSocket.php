@@ -8,12 +8,12 @@ declare(strict_types=1);
  * @document https://doc.szwtdl.cn
  * @license  https://github.com/wtdl-swoole/wtdl/blob/master/LICENSE
  */
-namespace Wtdl\Server;
+namespace Szwtdl\Framework\Server;
 
 use Swoole\WebSocket\Server;
-use Wtdl\Application;
-use Wtdl\Listener;
-use Wtdl\Route;
+use Szwtdl\Framework\Application;
+use Szwtdl\Framework\Listener;
+use Szwtdl\Framework\Route;
 
 class WebSocket
 {
