@@ -1,5 +1,5 @@
 {
-    "name": "wtdl-swoole/wtdl",
+    "name": "szwtdl/wtdl-swoole",
     "description": "Wtdl framework",
     "type": "library",
     "license": "Apache-2.0",
