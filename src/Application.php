@@ -3,12 +3,11 @@
 declare(strict_types=1);
 /**
  * 深圳网通动力网络技术有限公司
- * This file is part of wtdl-Shop.
+ * * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
  * @document https://doc.szwtdl.cn
- * @license  https://github.com/wtdl-swoole/wtdl/blob/master/LICENSE
+ * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
-
 namespace Szwtdl\Framework;
 
 use Szwtdl\Framework\Server\Http;
@@ -67,8 +66,8 @@ class Application
                 if ($server->checkEnv()) {
                     return;
                 }
-                self::echoSuccess("=============Swoole framework " . swoole_version() . "==================");
-                self::echoSuccess("=============Szwtdl framework " . self::VERSION . "==================");
+                self::echoSuccess('=============Swoole framework ' . swoole_version() . '==================');
+                self::echoSuccess('=============Szwtdl framework ' . self::VERSION . '==================');
                 $server->start();
                 break;
             case 'stop':
@@ -85,6 +84,4 @@ class Application
                 self::echoError("use {$argv[0]} [http:start, ws:start, mqtt:start, main:start]");
         }
     }
-
-
 }

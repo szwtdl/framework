@@ -3,21 +3,19 @@
 declare(strict_types=1);
 /**
  * 深圳网通动力网络技术有限公司
- * This file is part of wtdl-Shop.
+ * * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
  * @document https://doc.szwtdl.cn
- * @license  https://github.com/wtdl-swoole/wtdl/blob/master/LICENSE
+ * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
-
 namespace Szwtdl\Framework\Server;
 
-use Swoole\Coroutine;
 use Swoole\Coroutine\System;
-use Swoole\Timer;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server;
 use Swoole\Server as HttpServer;
+use Swoole\Timer;
 use Szwtdl\Framework\Application;
 use Szwtdl\Framework\Context;
 use Szwtdl\Framework\Listener;
@@ -29,7 +27,9 @@ class Http
     protected $_server;
 
     protected $_config;
+
     protected $_httpConfig;
+
     protected $_route;
 
     public function __construct()
@@ -82,8 +82,8 @@ class Http
 
     public function checkEnv()
     {
-        $master_pid = (int)@file_get_contents($this->_config['http']['settings']['pid_file']);
-        if (!empty($master_pid)) {
+        $master_pid = (int) @file_get_contents($this->_config['http']['settings']['pid_file']);
+        if (! empty($master_pid)) {
             return true;
         }
         return false;
@@ -116,7 +116,7 @@ class Http
             [$class, $func] = $callbackItem;
             $this->_server->on($eventKey, [$class, $func]);
         }
-        if (isset($this->_config['process']) && !empty($this->_config['process'])) {
+        if (isset($this->_config['process']) && ! empty($this->_config['process'])) {
             foreach ($this->_config['process'] as $processItem) {
                 [$class, $func] = $processItem;
                 $this->_server->addProcess($class::$func($this->_server));
@@ -128,8 +128,8 @@ class Http
     public function reload()
     {
         Timer::after(100, function () {
-            $master_pid = (int)file_get_contents($this->_config['http']['settings']['pid_file']);
-            System::exec("kill -USR1 " . $master_pid);
+            $master_pid = (int) file_get_contents($this->_config['http']['settings']['pid_file']);
+            System::exec('kill -USR1 ' . $master_pid);
         });
         \Swoole\Event::wait();
     }
@@ -137,8 +137,8 @@ class Http
     public function stop()
     {
         Timer::after(100, function () {
-            $master_pid = (int)file_get_contents($this->_config['http']['settings']['pid_file']);
-            System::exec("kill -TERM " . $master_pid);
+            $master_pid = (int) file_get_contents($this->_config['http']['settings']['pid_file']);
+            System::exec('kill -TERM ' . $master_pid);
         });
         \Swoole\Event::wait();
     }
@@ -152,11 +152,10 @@ class Http
         }
         swoole_event_add($init, function ($fd) {
             $events = \inotify_read($fd);
-            if (!empty($events)) {
-                $master_pid = (int)file_get_contents($this->_config['http']['settings']['pid_file']);
+            if (! empty($events)) {
+                $master_pid = (int) file_get_contents($this->_config['http']['settings']['pid_file']);
                 posix_kill($master_pid, SIGUSR1);
             }
         });
     }
-
 }

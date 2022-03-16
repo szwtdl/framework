@@ -3,4 +3,5 @@
 /tests
 .composer.lock
 .php-fix-fixer.php
+.php-cs-fixer.cache
 phpunit.xml.dist
