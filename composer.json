@@ -1,0 +1,36 @@
+{
+    "name": "wtdl-swoole/wtdl",
+    "description": "Wtdl framework",
+    "type": "library",
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "pengjian",
+            "email": "szpengjian@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "ext-swoole": ">=4.4",
+        "phpunit/phpunit": "^9.5",
+        "monolog/monolog": "^2.3",
+        "psr/http-message": "^1.0",
+        "nikic/fast-route": "^1.3",
+        "friendsofphp/php-cs-fixer": "^3.4",
+        "swoole/ide-helper": "^4.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "Wtdl\\": "src/",
+            "Tests\\": "tests/"
+        },
+        "files": [
+            "src/functions.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    }
+}
