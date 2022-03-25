@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 /**
- * 深圳网通动力网络技术有限公司
- * * This file is part of szwtdl/framework.
+ * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
- * @document https://doc.szwtdl.cn
+ * @document https://wiki.szwtdl.cn
+ * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
 namespace Szwtdl\Framework;
@@ -54,8 +54,7 @@ class Route
                 $response->end("404 Not http://{$request->server['remote_addr']}:{$request->server['server_port']}{$uri}");
                 break;
             case Dispatcher::METHOD_NOT_ALLOWED:
-                $response->status(500);
-                $response->end('505');
+                $response->end('method ' . $httpMethod . ' empty');
                 break;
             case Dispatcher::FOUND:
                 if (is_string($routeInfo[1])) {

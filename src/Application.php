@@ -2,15 +2,18 @@
 
 declare(strict_types=1);
 /**
- * 深圳网通动力网络技术有限公司
- * * This file is part of szwtdl/framework.
+ * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
- * @document https://doc.szwtdl.cn
+ * @document https://wiki.szwtdl.cn
+ * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
+
 namespace Szwtdl\Framework;
 
+use Szwtdl\Framework\Contract\RequestInterface;
 use Szwtdl\Framework\Server\Http;
+use Szwtdl\Framework\Server\Mqtt;
 use Szwtdl\Framework\Server\WebSocket;
 
 class Application
@@ -53,10 +56,11 @@ class Application
                 break;
             case 'ws':
                 $className = WebSocket::class;
+                $server = new $className();
                 break;
             case 'mqtt':
-                self::echoError('待开放中');
-                return;
+                $className = Mqtt::class;
+                $server = new $className();
                 break;
             default:
                 self::echoError('暂未开放自定义服务');
@@ -66,8 +70,6 @@ class Application
                 if ($server->checkEnv()) {
                     return;
                 }
-                self::echoSuccess('=============Swoole framework ' . swoole_version() . '==================');
-                self::echoSuccess('=============Szwtdl framework ' . self::VERSION . '==================');
                 $server->start();
                 break;
             case 'stop':
@@ -79,6 +81,9 @@ class Application
                 if ($server->checkEnv()) {
                     $server->reload();
                 }
+                break;
+            case 'watch':
+                $server->watch();
                 break;
             default:
                 self::echoError("use {$argv[0]} [http:start, ws:start, mqtt:start, main:start]");

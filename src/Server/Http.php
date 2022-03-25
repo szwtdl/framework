@@ -2,15 +2,18 @@
 
 declare(strict_types=1);
 /**
- * 深圳网通动力网络技术有限公司
- * * This file is part of szwtdl/framework.
+ * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
- * @document https://doc.szwtdl.cn
+ * @document https://wiki.szwtdl.cn
+ * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
+
 namespace Szwtdl\Framework\Server;
 
+use Swoole\Coroutine;
 use Swoole\Coroutine\System;
+use Swoole\Exception;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server;
@@ -18,11 +21,12 @@ use Swoole\Server as HttpServer;
 use Swoole\Timer;
 use Szwtdl\Framework\Application;
 use Szwtdl\Framework\Context;
+use Szwtdl\Framework\Contract\ServerInterface;
 use Szwtdl\Framework\Listener;
 use Szwtdl\Framework\Route;
 use Szwtdl\Framework\SimpleRoute;
 
-class Http
+class Http implements ServerInterface
 {
     protected $_server;
 
@@ -32,49 +36,107 @@ class Http
 
     protected $_route;
 
+    protected $master_pid;
+
+
     public function __construct()
     {
         $config = config('servers');
         $this->_httpConfig = $config['http'];
+        if (is_file($config['http']['settings']['pid_file'])) {
+            $this->master_pid = (int)file_get_contents($config['http']['settings']['pid_file']);
+        }
         $this->_config = $config;
     }
 
+    /**
+     * @param HttpServer $server
+     * @return void
+     * @throws \Exception
+     */
     public function onStart(HttpServer $server)
     {
-        Application::echoSuccess('-----------------ShopTo Version ' . Application::VERSION . '----------------------');
-        Application::echoSuccess('-----------------Swoole Version ' . swoole_version() . '----------------------');
-        Application::echoSuccess("Swoole Http Server running：http://{$this->_config['host']}:{$this->_config['port']}");
+        Application::echoSuccess("Swoole Http Server running：http://{$this->_httpConfig['host']}:{$this->_httpConfig['port']}");
         Listener::getInstance()->listen('start', $server);
     }
 
+    /**
+     * @param HttpServer $server
+     * @return void
+     * @throws \Exception
+     */
     public function onManagerStart(HttpServer $server)
     {
+        cli_set_process_title("php bin/wtdl http:start: master");
         Listener::getInstance()->listen('managerStart', $server);
     }
 
+    /**
+     * @param HttpServer $server
+     * @param int $workerId
+     * @return void
+     * @throws \Exception
+     */
     public function onWorkerStart(HttpServer $server, int $workerId)
     {
         $this->_route = Route::getInstance();
         Listener::getInstance()->listen('workerStart', $server, $workerId);
     }
 
+    /**
+     * @param HttpServer $server
+     * @param int $worker_id
+     * @param int $worker_pid
+     * @param int $exit_code
+     * @param int $signal
+     * @return void
+     * @throws \Exception
+     */
+    public function onWorkerError(HttpServer $server, int $worker_id, int $worker_pid, int $exit_code, int $signal)
+    {
+        Listener::getInstance()->listen('workerError', $server, $worker_id, $worker_pid, $exit_code, $signal);
+    }
+
+    /**
+     * @param HttpServer $server
+     * @param int $workerId
+     * @return void
+     * @throws \Exception
+     */
     public function onSimpleWorkerStart(HttpServer $server, int $workerId)
     {
         $this->_route = SimpleRoute::getInstance();
         Listener::getInstance()->listen('simpleWorkerStart', $server, $workerId);
     }
 
+    /**
+     * @param Request $request
+     * @param Response $response
+     * @return void
+     * @throws Exception
+     */
     public function onRequest(Request $request, Response $response)
     {
         if ($request->server['path_info'] == '/favicon.ico' || $request->server['request_uri'] == '/favicon.ico') {
             $response->end();
             return;
         }
-        Context::set('request', $request);
-        Context::set('response', $response);
-        $this->_route->dispatch($request, $response);
+        try {
+            Context::set('request', $request);
+            Context::set('response', $response);
+            $this->_route->dispatch($request, $response);
+        } catch (\Exception $exception) {
+            throw new Exception("error:" . $exception->getMessage());
+        }
     }
 
+    /**
+     * @param $server
+     * @param $fd
+     * @param $from_id
+     * @param $data
+     * @return void
+     */
     public function onReceive($server, $fd, $from_id, $data)
     {
         $this->_route->dispatch($server, $fd, $data);
@@ -82,8 +144,7 @@ class Http
 
     public function checkEnv()
     {
-        $master_pid = (int) @file_get_contents($this->_config['http']['settings']['pid_file']);
-        if (! empty($master_pid)) {
+        if (!empty($this->master_pid)) {
             return true;
         }
         return false;
@@ -104,6 +165,7 @@ class Http
                 $this->_httpConfig['sock_type']
             );
             $this->_server->on('workerStart', [$this, 'onWorkerStart']);
+            $this->_server->on('workerError', [$this, 'onWorkerError']);
             $this->_server->on('request', [$this, 'onRequest']);
         }
         $this->_server->set($this->_httpConfig['settings']);
@@ -116,7 +178,7 @@ class Http
             [$class, $func] = $callbackItem;
             $this->_server->on($eventKey, [$class, $func]);
         }
-        if (isset($this->_config['process']) && ! empty($this->_config['process'])) {
+        if (isset($this->_config['process']) && !empty($this->_config['process'])) {
             foreach ($this->_config['process'] as $processItem) {
                 [$class, $func] = $processItem;
                 $this->_server->addProcess($class::$func($this->_server));
@@ -128,8 +190,7 @@ class Http
     public function reload()
     {
         Timer::after(100, function () {
-            $master_pid = (int) file_get_contents($this->_config['http']['settings']['pid_file']);
-            System::exec('kill -USR1 ' . $master_pid);
+            System::exec('kill -USR1 ' . $this->master_pid);
         });
         \Swoole\Event::wait();
     }
@@ -137,8 +198,8 @@ class Http
     public function stop()
     {
         Timer::after(100, function () {
-            $master_pid = (int) file_get_contents($this->_config['http']['settings']['pid_file']);
-            System::exec('kill -TERM ' . $master_pid);
+            System::exec('kill -TERM ' . $this->master_pid);
+            unlink(RUNTIME_PATH . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'szwtdl.log');
         });
         \Swoole\Event::wait();
     }
@@ -146,15 +207,17 @@ class Http
     public function watch()
     {
         $init = \inotify_init();
-        $files = get_included_files();
+        $files = [];
+        read_file(dirname(APP_PATH . DIRECTORY_SEPARATOR . 'App'), $files);
+        read_file(dirname(CONFIG_PATH . DIRECTORY_SEPARATOR . 'config'), $files);
+        $files = array_merge_recursive(get_included_files(), $files);
         foreach ($files as $file) {
-            \inotify_add_watch($init, $file, IN_MODIFY);
+            inotify_add_watch($init, $file, IN_MODIFY);
         }
         swoole_event_add($init, function ($fd) {
             $events = \inotify_read($fd);
-            if (! empty($events)) {
-                $master_pid = (int) file_get_contents($this->_config['http']['settings']['pid_file']);
-                posix_kill($master_pid, SIGUSR1);
+            if (!empty($events)) {
+                posix_kill($this->master_pid, SIGUSR1);
             }
         });
     }

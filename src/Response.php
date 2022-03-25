@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 /**
- * 深圳网通动力网络技术有限公司
- * * This file is part of szwtdl/framework.
+ * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
- * @document https://doc.szwtdl.cn
+ * @document https://wiki.szwtdl.cn
+ * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
+
 namespace Szwtdl\Framework;
 
 use Psr\Http\Message\ResponseInterface;
@@ -15,15 +16,6 @@ use Psr\Http\Message\StreamInterface;
 
 class Response implements ResponseInterface
 {
-    private $response;
-
-    private $request;
-
-    private function __construct()
-    {
-        $this->response = Context::get('response');
-        $this->request = Context::get('request');
-    }
 
     public function getProtocolVersion()
     {
@@ -69,7 +61,6 @@ class Response implements ResponseInterface
 
     public function getBody()
     {
-        return $this->request->getContent();
     }
 
     public function withBody(StreamInterface $body)
