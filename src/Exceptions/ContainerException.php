@@ -1,11 +1,24 @@
 <?php
 
+declare(strict_types=1);
+/**
+ * 深圳网通动力网络技术有限公司
+ * This file is part of szwtdl/framework.
+ * @link     https://www.szwtdl.cn
+ * @document https://wiki.szwtdl.cn
+ * @contact  szpengjian@gmail.com
+ * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
+ */
 namespace Szwtdl\Framework\Exception;
 
-use Psr\Container\NotFoundExceptionInterface;
+use Psr\Container\ContainerExceptionInterface;
 
-class NotFoundException implements NotFoundExceptionInterface
+class ContainerException implements ContainerExceptionInterface
 {
+    public function __toString()
+    {
+        // TODO: Implement __toString() method.
+    }
 
     public function getMessage(): string
     {
@@ -40,10 +53,5 @@ class NotFoundException implements NotFoundExceptionInterface
     public function getPrevious()
     {
         // TODO: Implement getPrevious() method.
-    }
-
-    public function __toString()
-    {
-        // TODO: Implement __toString() method.
     }
 }

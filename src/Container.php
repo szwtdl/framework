@@ -1,14 +1,24 @@
 <?php
 
+declare(strict_types=1);
+/**
+ * 深圳网通动力网络技术有限公司
+ * This file is part of szwtdl/framework.
+ * @link     https://www.szwtdl.cn
+ * @document https://wiki.szwtdl.cn
+ * @contact  szpengjian@gmail.com
+ * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
+ */
 namespace Szwtdl\Framework;
 
+use Closure;
 use Psr\Container\ContainerInterface;
 use Szwtdl\Framework\Exception\NotFoundException;
-use Closure;
 
 class Container implements ContainerInterface
 {
     protected $instances;
+
     protected $binds;
 
     public function bind($abstract, $concrete)
@@ -30,7 +40,6 @@ class Container implements ContainerInterface
     }
 
     /**
-     * @param string $id
      * @return bool
      */
     public function get(string $id)
@@ -46,8 +55,7 @@ class Container implements ContainerInterface
     {
         if (isset($this->instances[$id])) {
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 }

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 /**
+ * 深圳网通动力网络技术有限公司
  * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
  * @document https://wiki.szwtdl.cn
@@ -34,12 +35,7 @@ abstract class AbstractController
         }
     }
 
-    /**
-     * @param array $data
-     * @param int $code
-     * @return Response
-     */
-    public function json(array $data = [],int $code = 200): Response
+    public function json(array $data = [], int $code = 200): Response
     {
         $this->response->header('Content-Type', 'application/json');
         $this->response->status($code);
@@ -47,11 +43,6 @@ abstract class AbstractController
         return $this->response;
     }
 
-    /**
-     * @param string $template
-     * @param array $data
-     * @return Response
-     */
     public function view(string $template, array $data = []): Response
     {
         try {

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 /**
+ * 深圳网通动力网络技术有限公司
  * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
  * @document https://wiki.szwtdl.cn
@@ -11,9 +12,8 @@ declare(strict_types=1);
  */
 
 use Swoole\Exception;
-use Swoole\Coroutine;
-use Szwtdl\Framework\Context;
 use Swoole\Http\Response;
+use Szwtdl\Framework\Context;
 use Szwtdl\View\TwigEngine;
 
 /**
@@ -39,13 +39,26 @@ if (!function_exists('config')) {
     }
 }
 
+
+if (!function_exists('redirect')) {
+
+    function redirect(string $path, int $http_code = 302)
+    {
+        $response = Context::get('response');
+        if (!empty($response) && $response->isWritable() && $response instanceof Response) {
+            $request = Context::get('request');
+            $response->redirect("http://" . $request->header['host'] . DIRECTORY_SEPARATOR . trim($path, '/'), $http_code);
+        }
+        return $response;
+    }
+}
+
 if (!function_exists('view')) {
     function view(string $template, array $data = []): Response
     {
         $response = Context::get('response');
         if (!empty($response) && $response->isWritable() && $response instanceof Response) {
-            $response->setHeader("Content-Type", "text/html;charset=UTF-8");
-            $response->setStatusCode(200);
+            $response->setHeader('Content-Type', 'text/html;charset=UTF-8');
             try {
                 $twig = (new TwigEngine())->render($template, $data, [
                     'view_path' => VIEW_PATH,
@@ -61,12 +74,11 @@ if (!function_exists('view')) {
 }
 
 if (!function_exists('json')) {
-    function json(array $data = [], int $code = 200)
+    function json(array $data = [])
     {
         $response = Context::get('response');
         if (!empty($response) && $response->isWritable() && $response instanceof Response) {
-            $response->setHeader("Content-Type", "application/json;charset=UTF-8");
-            $response->setStatusCode($code);
+            $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
             $response->end(\json_encode($data));
         }
         return $response;

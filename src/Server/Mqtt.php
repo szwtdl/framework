@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 /**
+ * 深圳网通动力网络技术有限公司
  * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
  * @document https://wiki.szwtdl.cn
  * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
-
 namespace Szwtdl\Framework\Server;
 
 use Swoole\Server;
 use Szwtdl\Framework\Application;
-use Szwtdl\Framework\Listener;
 use Szwtdl\Framework\Contract\ServerInterface;
+use Szwtdl\Framework\Listener;
 
 class Mqtt implements ServerInterface
 {
@@ -31,7 +31,7 @@ class Mqtt implements ServerInterface
         $this->_config = config('servers');
         $this->_MqttConfig = $this->_config['mqtt'];
         if (is_file($this->_config['http']['settings']['pid_file'])) {
-            $this->master_pid = (int)file_get_contents($this->_config['http']['settings']['pid_file']);
+            $this->master_pid = (int) file_get_contents($this->_config['http']['settings']['pid_file']);
         }
     }
 
@@ -68,7 +68,7 @@ class Mqtt implements ServerInterface
             $resp = chr(32) . chr(2) . chr(0) . chr(0);
             $server->send($fd, $resp);
         }
-        echo "received length=" . strlen($data) . "\n";
+        echo 'received length=' . strlen($data) . "\n";
     }
 
     public function onClose($server, $fd)
@@ -95,10 +95,8 @@ class Mqtt implements ServerInterface
         $this->_server->start();
     }
 
-
     public function reload()
     {
-
     }
 
     public function checkEnv()
@@ -108,12 +106,10 @@ class Mqtt implements ServerInterface
 
     public function stop()
     {
-
     }
 
     public function watch()
     {
-
     }
 
     public function decodeValue($data)
@@ -142,13 +138,13 @@ class Mqtt implements ServerInterface
         $connect_info['protocol_name'] = $this->decodeString($data);
         $offset = strlen($connect_info['protocol_name']) + 2;
         $connect_info['version'] = ord(substr($data, $offset, 1));
-        $offset += 1;
+        ++$offset;
         $byte = ord($data[$offset]);
         $connect_info['willRetain'] = ($byte & 0x20 == 0x20);
         $connect_info['willQos'] = ($byte & 0x18 >> 3);
         $connect_info['willFlag'] = ($byte & 0x04 == 0x04);
         $connect_info['cleanStart'] = ($byte & 0x02 == 0x02);
-        $offset += 1;
+        ++$offset;
         $connect_info['keepalive'] = $this->decodeValue(substr($data, $offset, 2));
         $offset += 2;
         $connect_info['clientId'] = $this->decodeString(substr($data, $offset));

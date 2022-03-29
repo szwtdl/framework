@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 /**
+ * 深圳网通动力网络技术有限公司
  * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
  * @document https://wiki.szwtdl.cn
@@ -11,14 +12,13 @@ declare(strict_types=1);
 
 namespace Szwtdl\Framework;
 
-use Szwtdl\Framework\Contract\RequestInterface;
 use Szwtdl\Framework\Server\Http;
 use Szwtdl\Framework\Server\Mqtt;
 use Szwtdl\Framework\Server\WebSocket;
 
 class Application
 {
-    public const VERSION = '0.0.1';
+    public const VERSION = '1.0.0';
 
     public static $route;
 
@@ -30,6 +30,22 @@ class Application
     public static function println($strings)
     {
         echo $strings . PHP_EOL;
+    }
+
+    public static function welcome($msg)
+    {
+        echo "\033[32m\t                   _      _ _ 
+\t ___ ______      _| |_ __| | |
+\t/ __|_  /\ \ /\ / / __/ _` | |
+\t\__ \/ /  \ V  V /| || (_| | |
+\t|___/___|  \_/\_/  \__\__,_|_|\033[0m\n";
+        self::println("\033[32m ============================================\033[0m");
+        self::println("\033[32m‖ \tSwoole " . swoole_version() . "\t\t\t    ‖\033[0m");
+        self::println("\033[32m‖ \tFramework " . self::VERSION . "\t\t\t    ‖\033[0m");
+        self::println("\033[32m‖ \tServer http://{$msg}\t    ‖\033[0m");
+        self::println("\033[32m‖ \tSite https://docs.szwtdl.cn\t    ‖\033[0m");
+        self::println("\033[32m ============================================\033[0m");
+        echo PHP_EOL;
     }
 
     public static function echoSuccess($msg)
@@ -64,12 +80,15 @@ class Application
                 break;
             default:
                 self::echoError('暂未开放自定义服务');
+                break;
         }
+        $setting = $server->getSetting();
         switch ($command[1]) {
             case 'start':
                 if ($server->checkEnv()) {
                     return;
                 }
+                self::welcome("{$setting['http']['host']}:{$setting['http']['port']}");
                 $server->start();
                 break;
             case 'stop':

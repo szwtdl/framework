@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 /**
+ * 深圳网通动力网络技术有限公司
  * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
  * @document https://wiki.szwtdl.cn
@@ -11,15 +12,12 @@ declare(strict_types=1);
 namespace Szwtdl\Framework\Server;
 
 use Swoole\Coroutine\System;
-use Swoole\Http\Request;
-use Swoole\Http\Response;
 use Swoole\Timer;
 use Swoole\WebSocket\Server;
 use Szwtdl\Framework\Application;
-use Szwtdl\Framework\Context;
+use Szwtdl\Framework\Contract\ServerInterface;
 use Szwtdl\Framework\Listener;
 use Szwtdl\Framework\Route;
-use Szwtdl\Framework\Contract\ServerInterface;
 
 class WebSocket implements ServerInterface
 {
@@ -37,8 +35,8 @@ class WebSocket implements ServerInterface
     {
         $config = config('servers');
         $this->_wsConfig = $config['ws'];
-        if (is_file($config['http']['settings']['pid_file'])){
-            $this->master_pid = (int)file_get_contents($config['http']['settings']['pid_file']);
+        if (is_file($config['http']['settings']['pid_file'])) {
+            $this->master_pid = (int) file_get_contents($config['http']['settings']['pid_file']);
         }
         $this->_config = $config;
     }
@@ -119,7 +117,7 @@ class WebSocket implements ServerInterface
         }
         swoole_event_add($init, function ($fd) {
             $events = \inotify_read($fd);
-            if (!empty($events)) {
+            if (! empty($events)) {
                 posix_kill($this->master_pid, SIGUSR1);
             }
         });

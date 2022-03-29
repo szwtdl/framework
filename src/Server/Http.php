@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 /**
+ * 深圳网通动力网络技术有限公司
  * This file is part of szwtdl/framework.
  * @link     https://www.szwtdl.cn
  * @document https://wiki.szwtdl.cn
@@ -11,15 +12,14 @@ declare(strict_types=1);
 
 namespace Szwtdl\Framework\Server;
 
-use Swoole\Coroutine;
 use Swoole\Coroutine\System;
+use Swoole\Event;
 use Swoole\Exception;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server;
 use Swoole\Server as HttpServer;
 use Swoole\Timer;
-use Szwtdl\Framework\Application;
 use Szwtdl\Framework\Context;
 use Szwtdl\Framework\Contract\ServerInterface;
 use Szwtdl\Framework\Listener;
@@ -38,7 +38,6 @@ class Http implements ServerInterface
 
     protected $master_pid;
 
-
     public function __construct()
     {
         $config = config('servers');
@@ -49,32 +48,29 @@ class Http implements ServerInterface
         $this->_config = $config;
     }
 
+    public function getSetting()
+    {
+        return $this->_config;
+    }
+
     /**
-     * @param HttpServer $server
-     * @return void
      * @throws \Exception
      */
     public function onStart(HttpServer $server)
     {
-        Application::echoSuccess("Swoole Http Server running：http://{$this->_httpConfig['host']}:{$this->_httpConfig['port']}");
         Listener::getInstance()->listen('start', $server);
     }
 
     /**
-     * @param HttpServer $server
-     * @return void
      * @throws \Exception
      */
     public function onManagerStart(HttpServer $server)
     {
-        cli_set_process_title("php bin/wtdl http:start: master");
+        cli_set_process_title('php bin/wtdl http:start: master');
         Listener::getInstance()->listen('managerStart', $server);
     }
 
     /**
-     * @param HttpServer $server
-     * @param int $workerId
-     * @return void
      * @throws \Exception
      */
     public function onWorkerStart(HttpServer $server, int $workerId)
@@ -84,12 +80,6 @@ class Http implements ServerInterface
     }
 
     /**
-     * @param HttpServer $server
-     * @param int $worker_id
-     * @param int $worker_pid
-     * @param int $exit_code
-     * @param int $signal
-     * @return void
      * @throws \Exception
      */
     public function onWorkerError(HttpServer $server, int $worker_id, int $worker_pid, int $exit_code, int $signal)
@@ -98,9 +88,6 @@ class Http implements ServerInterface
     }
 
     /**
-     * @param HttpServer $server
-     * @param int $workerId
-     * @return void
      * @throws \Exception
      */
     public function onSimpleWorkerStart(HttpServer $server, int $workerId)
@@ -109,10 +96,12 @@ class Http implements ServerInterface
         Listener::getInstance()->listen('simpleWorkerStart', $server, $workerId);
     }
 
+    public function onShutdown(HttpServer $server)
+    {
+        echo "===========onShutdown============\n";
+    }
+
     /**
-     * @param Request $request
-     * @param Response $response
-     * @return void
      * @throws Exception
      */
     public function onRequest(Request $request, Response $response)
@@ -121,12 +110,26 @@ class Http implements ServerInterface
             $response->end();
             return;
         }
+        //異常處理
+        register_shutdown_function(function () use ($response) {
+            $error = error_get_last();
+            switch ($error['type'] ?? null) {
+                case E_ERROR :
+                case E_PARSE :
+                case E_CORE_ERROR :
+                case E_COMPILE_ERROR :
+                    $response->status(500);
+                    $response->end($error['message']);
+                    break;
+            }
+            exit(0);
+        });
         try {
             Context::set('request', $request);
             Context::set('response', $response);
             $this->_route->dispatch($request, $response);
-        } catch (\Exception $exception) {
-            throw new Exception("error:" . $exception->getMessage());
+        } catch (Exception $exception) {
+            return $response->end($exception->getMessage());
         }
     }
 
@@ -135,7 +138,6 @@ class Http implements ServerInterface
      * @param $fd
      * @param $from_id
      * @param $data
-     * @return void
      */
     public function onReceive($server, $fd, $from_id, $data)
     {
@@ -158,14 +160,10 @@ class Http implements ServerInterface
             $this->_server->on('receive', [$this, 'onReceive']);
             unset($this->_httpConfig['settings']['only_simple_http']);
         } else {
-            $this->_server = new Server(
-                $this->_httpConfig['host'],
-                $this->_httpConfig['port'],
-                $this->_config['mode'],
-                $this->_httpConfig['sock_type']
-            );
+            $this->_server = new Server($this->_httpConfig['host'], $this->_httpConfig['port'], $this->_config['mode'], $this->_httpConfig['sock_type']);
             $this->_server->on('workerStart', [$this, 'onWorkerStart']);
             $this->_server->on('workerError', [$this, 'onWorkerError']);
+            $this->_server->on('shutdown', [$this, 'onShutdown']);
             $this->_server->on('request', [$this, 'onRequest']);
         }
         $this->_server->set($this->_httpConfig['settings']);
@@ -192,7 +190,7 @@ class Http implements ServerInterface
         Timer::after(100, function () {
             System::exec('kill -USR1 ' . $this->master_pid);
         });
-        \Swoole\Event::wait();
+        Event::wait();
     }
 
     public function stop()
@@ -201,7 +199,7 @@ class Http implements ServerInterface
             System::exec('kill -TERM ' . $this->master_pid);
             unlink(RUNTIME_PATH . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'szwtdl.log');
         });
-        \Swoole\Event::wait();
+        Event::wait();
     }
 
     public function watch()

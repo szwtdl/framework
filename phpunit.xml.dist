@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         colors="true"
+         cacheResult="false"
+         columns="max"
+         bootstrap="vendor/autoload.php">
+
+    <testsuite name="money">
+        <directory suffix="Test.php">./tests</directory>
+        <file>tests/DemoTest.php</file>
+    </testsuite>
+
+</phpunit>
