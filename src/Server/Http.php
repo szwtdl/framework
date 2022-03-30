@@ -20,6 +20,7 @@ use Swoole\Http\Response;
 use Swoole\Http\Server;
 use Swoole\Server as HttpServer;
 use Swoole\Timer;
+use Szwtdl\Framework\Application;
 use Szwtdl\Framework\Context;
 use Szwtdl\Framework\Contract\ServerInterface;
 use Szwtdl\Framework\Listener;
@@ -110,7 +111,7 @@ class Http implements ServerInterface
             $response->end();
             return;
         }
-        //異常處理
+        //异常处理
         register_shutdown_function(function () use ($response) {
             $error = error_get_last();
             switch ($error['type'] ?? null) {
@@ -128,8 +129,9 @@ class Http implements ServerInterface
             Context::set('request', $request);
             Context::set('response', $response);
             $this->_route->dispatch($request, $response);
-        } catch (Exception $exception) {
-            return $response->end($exception->getMessage());
+        } catch (\Throwable $exception) {
+            Application::println("请求异常: " . $exception->getMessage());
+            return $exception->getMessage();
         }
     }
 
@@ -215,7 +217,7 @@ class Http implements ServerInterface
         swoole_event_add($init, function ($fd) {
             $events = \inotify_read($fd);
             if (!empty($events)) {
-                posix_kill($this->master_pid, SIGUSR1);
+                @posix_kill($this->master_pid, SIGUSR1);
             }
         });
     }

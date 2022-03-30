@@ -7,5 +7,5 @@ use Swoole\Http\Response;
 
 interface MiddlewareInterface
 {
-    public function execute(Request $request, Response $response, $next);
+    public function handle(Request $request, Response $response, \Closure $next);
 }

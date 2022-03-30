@@ -34,7 +34,7 @@ class WebSocket implements ServerInterface
     public function __construct()
     {
         $config = config('servers');
-        $this->_wsConfig = $config['ws'];
+        $this->_wsConfig = $config['websocket'];
         if (is_file($config['http']['settings']['pid_file'])) {
             $this->master_pid = (int) file_get_contents($config['http']['settings']['pid_file']);
         }

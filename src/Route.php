@@ -13,6 +13,8 @@ declare(strict_types=1);
 namespace Szwtdl\Framework;
 
 use FastRoute\Dispatcher;
+use FastRoute\RouteCollector;
+use RuntimeException;
 use function FastRoute\simpleDispatcher;
 
 class Route
@@ -36,7 +38,7 @@ class Route
             self::$instance = new self();
             self::$middlewares = config('middleware');
             self::$config = config('routes', []);
-            self::$dispatcher = simpleDispatcher(function (\FastRoute\RouteCollector $routerCollector) {
+            self::$dispatcher = simpleDispatcher(function (RouteCollector $routerCollector) {
                 foreach (self::$config as $routerDefine) {
                     $routerCollector->addRoute($routerDefine[0], $routerDefine[1], $routerDefine[2]);
                 }
@@ -56,8 +58,12 @@ class Route
         ];
         switch ($routeInfo[0]) {
             case Dispatcher::NOT_FOUND:
-                $response->status(404);
-                $response->end("404 Not http://{$request->server['host']}{$uri}");
+                $className = "App\Controller\Controller";
+                $result = (new $className)->index(...$args);
+                if (is_array($result) && $response->isWritable()) {
+                    $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
+                    $response->end(\json_encode($result));
+                }
                 break;
             case Dispatcher::METHOD_NOT_ALLOWED:
                 $response->end('method ' . $httpMethod . ' empty');
@@ -65,13 +71,8 @@ class Route
             case Dispatcher::FOUND:
                 if (is_string($routeInfo[1])) {
                     [$className, $action] = explode('@', $routeInfo[1]);
-                    if (!class_exists($className)) {
-                        $response->end("Route class {$className} not");
-                        break;
-                    }
-                    $controller = new $className();
-                    if (!method_exists($controller, $action)) {
-                        $response->end("Route class {$className}->{$action} not action");
+                    if (!class_exists($className) || !method_exists((new $className), $action)) {
+                        $response->end("Route class {$className}->{$action} not");
                         break;
                     }
                     if (is_array($routeInfo[2])) {
@@ -79,35 +80,44 @@ class Route
                             $args[count($args) + 1] = $item;
                         }
                     }
-                    $middlewareHandler = function ($request, $response) use ($controller, $action, $args) {
-                        $res = $controller->{$action}(...$args);
-                        if (is_array($res) && $response->isWritable()) {
-                            $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
-                            $response->end(json_encode($res));
-                        }
-                    };
+                    $controller = new $className();
                     $middlewares = [];
                     foreach (self::$config as $route) {
                         if ($route[2] == $routeInfo[1] && isset($route[3]) && is_array($route[3])) {
                             $tmp = array_values($route[3]);
                             foreach ($tmp as $value) {
-                                foreach (self::$middlewares[$value] as $m) {
-                                    $middlewares[] = $m;
+                                if (!isset(self::$middlewares[$value])) {
+                                    continue;
+                                }
+                                foreach (self::$middlewares[$value] as $middleware) {
+                                    $middlewares[] = $middleware;
                                 }
                             }
                         }
                     }
+                    $middlewareHandler = function ($request, $response) {
+                    };
                     if (!empty($middlewares) && is_array($middlewares)) {
                         foreach ($middlewares as $middleware) {
-                            (new $middleware)->execute($request, $response, $middlewareHandler);
+                            $handle = (new $middleware)->handle($request, $response, $middlewareHandler);
+                            if (is_array($handle) && $response->isWritable()) {
+                                $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
+                                return $response->end(\json_encode($handle));
+                            }
                         }
                     }
-                    return $middlewareHandler($request, $response);
+                    $middlewareHandler($request, $response);
+                    $result = $controller->{$action}(...$args);
+                    if (is_array($result) && $response->isWritable()) {
+                        $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
+                        $response->end(\json_encode($result));
+                    }
+                    return $response;
                 }
                 if (is_callable($routeInfo[1])) {
                     return call_user_func_array($routeInfo[1], [$request, $response, $routeInfo[2] ?? null]);
                 }
-                break;
+                throw new RuntimeException("Route {$uri} error");
         }
         if ($response->isWritable()) {
             $response->status(400);
