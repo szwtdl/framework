@@ -41,6 +41,7 @@ class Http implements ServerInterface
 
     public function __construct()
     {
+        @session_start();
         $config = config('servers');
         $this->_httpConfig = $config['http'];
         if (is_file($config['http']['settings']['pid_file'])) {
@@ -100,6 +101,8 @@ class Http implements ServerInterface
     public function onShutdown(HttpServer $server)
     {
         echo "===========onShutdown============\n";
+        @unlink($this->_config['http']['settings']['pid_file']);
+        @unlink($this->_config['http']['settings']['log_file']);
     }
 
     /**

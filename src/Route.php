@@ -21,6 +21,8 @@ class Route
 {
     private static $instance;
 
+    private static $routes;
+
     private static $config;
 
     private static $dispatcher;
@@ -29,17 +31,21 @@ class Route
 
     private function __construct()
     {
-
     }
+
 
     public static function getInstance()
     {
         if (is_null(self::$instance)) {
             self::$instance = new self();
             self::$middlewares = config('middleware');
-            self::$config = config('routes', []);
+            self::$config = config('config', []);
+            self::$routes = config('routes', []);
             self::$dispatcher = simpleDispatcher(function (RouteCollector $routerCollector) {
-                foreach (self::$config as $routerDefine) {
+                foreach (self::$routes as $routerDefine) {
+                    if (!is_array($routerDefine) || count($routerDefine) < 2) {
+                        continue;
+                    }
                     $routerCollector->addRoute($routerDefine[0], $routerDefine[1], $routerDefine[2]);
                 }
             });
@@ -58,14 +64,16 @@ class Route
         ];
         switch ($routeInfo[0]) {
             case Dispatcher::NOT_FOUND:
-                $className = "App\Controller\Controller";
-                $result = (new $className)->index(...$args);
-                if (is_array($result) && $response->isWritable()) {
-                    $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
-                    $response->end(\json_encode($result));
-                }
+                $response->setHeader('Access-Control-Allow-Origin', '*');
+                $response->setHeader('Access-Control-Expose-Headers', '*');
+                $response->setHeader('Access-Control-Allow-Headers', '*');
+                $response->status(404);
+                $response->end("{$uri} Not defined");
                 break;
             case Dispatcher::METHOD_NOT_ALLOWED:
+                $response->setHeader('Access-Control-Allow-Origin', '*');
+                $response->setHeader('Access-Control-Expose-Headers', '*');
+                $response->setHeader('Access-Control-Allow-Headers', '*');
                 $response->end('method ' . $httpMethod . ' empty');
                 break;
             case Dispatcher::FOUND:
@@ -80,10 +88,9 @@ class Route
                             $args[count($args) + 1] = $item;
                         }
                     }
-                    $controller = new $className();
                     $middlewares = [];
                     foreach (self::$config as $route) {
-                        if ($route[2] == $routeInfo[1] && isset($route[3]) && is_array($route[3])) {
+                        if ($route[2] == $routeInfo[1] && is_array($route[3])) {
                             $tmp = array_values($route[3]);
                             foreach ($tmp as $value) {
                                 if (!isset(self::$middlewares[$value])) {
@@ -101,14 +108,21 @@ class Route
                         foreach ($middlewares as $middleware) {
                             $handle = (new $middleware)->handle($request, $response, $middlewareHandler);
                             if (is_array($handle) && $response->isWritable()) {
+                                $response->setHeader('Access-Control-Allow-Origin', '*');
+                                $response->setHeader('Access-Control-Expose-Headers', '*');
+                                $response->setHeader('Access-Control-Allow-Headers', '*');
                                 $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
                                 return $response->end(\json_encode($handle));
                             }
                         }
                     }
                     $middlewareHandler($request, $response);
+                    $controller = new $className();
                     $result = $controller->{$action}(...$args);
                     if (is_array($result) && $response->isWritable()) {
+                        $response->setHeader('Access-Control-Allow-Origin', '*');
+                        $response->setHeader('Access-Control-Expose-Headers', '*');
+                        $response->setHeader('Access-Control-Allow-Headers', '*');
                         $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
                         $response->end(\json_encode($result));
                     }
@@ -124,4 +138,5 @@ class Route
             $response->end("");
         }
     }
+
 }
