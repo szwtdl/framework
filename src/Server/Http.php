@@ -133,8 +133,7 @@ class Http implements ServerInterface
             Context::set('response', $response);
             $this->_route->dispatch($request, $response);
         } catch (\Throwable $exception) {
-            Application::println("请求异常: " . $exception->getMessage());
-            return $exception->getMessage();
+            return $response->end($exception->getMessage());
         }
     }
 
@@ -202,7 +201,7 @@ class Http implements ServerInterface
     {
         Timer::after(100, function () {
             System::exec('kill -TERM ' . $this->master_pid);
-            unlink(RUNTIME_PATH . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'szwtdl.log');
+            unlink($this->_config['http']['settings']['log_file']);
         });
         Event::wait();
     }

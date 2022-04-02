@@ -9,12 +9,14 @@ declare(strict_types=1);
  * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
+
 namespace Szwtdl\Framework\Server;
 
 use Swoole\Coroutine\System;
+use Swoole\Server as SwServer;
 use Swoole\Timer;
+use Swoole\Event;
 use Swoole\WebSocket\Server;
-use Szwtdl\Framework\Application;
 use Szwtdl\Framework\Contract\ServerInterface;
 use Szwtdl\Framework\Listener;
 use Szwtdl\Framework\Route;
@@ -34,34 +36,45 @@ class WebSocket implements ServerInterface
     public function __construct()
     {
         $config = config('servers');
-        $this->_wsConfig = $config['websocket'];
-        if (is_file($config['http']['settings']['pid_file'])) {
-            $this->master_pid = (int) file_get_contents($config['http']['settings']['pid_file']);
+        $this->_wsConfig = $config['ws'];
+        if (is_file($config['ws']['settings']['pid_file'])) {
+            $this->master_pid = (int)file_get_contents($config['ws']['settings']['pid_file']);
         }
         $this->_config = $config;
     }
 
-    public function onStart(\Swoole\Server $server)
+    public function getSetting()
     {
-        Application::echoSuccess("Swoole WebSocket Server running：ws://{$this->_wsConfig['host']}:{$this->_wsConfig['port']}");
+        return $this->_config;
+    }
+
+    public function onStart(SwServer $server)
+    {
         Listener::getInstance()->listen('start', $server);
     }
 
-    public function onManagerStart(\Swoole\Server $server)
+    public function onManagerStart(SwServer $server)
     {
-        Application::echoSuccess("Swoole WebSocket Server running：ws://{$this->_wsConfig['host']}:{$this->_wsConfig['port']}");
         Listener::getInstance()->listen('managerStart', $server);
     }
 
-    public function onWorkerStart(\Swoole\Server $server, int $workerId)
+    public function onWorkerStart(SwServer $server, int $workerId)
     {
         $this->_route = Route::getInstance();
         Listener::getInstance()->listen('workerStart', $server, $workerId);
     }
 
+    public function onShutdown(SwServer $server)
+    {
+        echo "===========onShutdown============\n";
+        @unlink($this->_config['ws']['settings']['pid_file']);
+        @unlink($this->_config['ws']['settings']['log_file']);
+    }
+
     public function start()
     {
         $this->_server = new Server($this->_wsConfig['host'], $this->_wsConfig['port'], $this->_config['mode']);
+        $this->_server->table = swoole_table(10240, 'fd:int');
         $this->_server->set($this->_wsConfig['settings']);
         if ($this->_config['mode'] == SWOOLE_BASE) {
             $this->_server->on('managerStart', [$this, 'onMasterStart']);
@@ -69,13 +82,14 @@ class WebSocket implements ServerInterface
             $this->_server->on('start', [$this, 'onStart']);
         }
         $this->_server->on('workerStart', [$this, 'onWorkerStart']);
-        if (! empty($this->_wsConfig['callbacks'])) {
+        $this->_server->on('shutdown', [$this, 'onShutdown']);
+        if (!empty($this->_wsConfig['callbacks'])) {
             foreach ($this->_wsConfig['callbacks'] as $eventKey => $callbackItem) {
                 [$class, $func] = $callbackItem;
                 $this->_server->on($eventKey, [$class, $func]);
             }
         }
-        if (isset($this->_wsConfig['process']) && ! empty($this->_wsConfig['process'])) {
+        if (isset($this->_wsConfig['process']) && !empty($this->_wsConfig['process'])) {
             foreach ($this->_wsConfig['process'] as $processItem) {
                 [$class, $func] = $processItem;
                 $this->_server->addProcess($class::$func($this->_server));
@@ -86,6 +100,9 @@ class WebSocket implements ServerInterface
 
     public function checkEnv()
     {
+        if (!empty($this->master_pid)) {
+            return true;
+        }
         return false;
     }
 
@@ -94,15 +111,16 @@ class WebSocket implements ServerInterface
         Timer::after(100, function () {
             System::exec('kill -USR1 ' . $this->master_pid);
         });
-        \Swoole\Event::wait();
+        Event::wait();
     }
 
     public function stop()
     {
         Timer::after(100, function () {
             System::exec('kill -TERM ' . $this->master_pid);
+            @unlink($this->_config['ws']['settings']['log_file']);
         });
-        \Swoole\Event::wait();
+        Event::wait();
     }
 
     public function watch()
@@ -117,7 +135,7 @@ class WebSocket implements ServerInterface
         }
         swoole_event_add($init, function ($fd) {
             $events = \inotify_read($fd);
-            if (! empty($events)) {
+            if (!empty($events)) {
                 posix_kill($this->master_pid, SIGUSR1);
             }
         });

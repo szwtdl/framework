@@ -32,7 +32,7 @@ class Application
         echo $strings . PHP_EOL;
     }
 
-    public static function welcome($msg)
+    public static function welcome($host)
     {
         echo "\033[32m\t                   _      _ _ 
 \t ___ ______      _| |_ __| | |
@@ -42,7 +42,7 @@ class Application
         self::println("\033[32m ============================================\033[0m");
         self::println("\033[32m‖ \tSwoole " . swoole_version() . "\t\t\t    ‖\033[0m");
         self::println("\033[32m‖ \tFramework " . self::VERSION . "\t\t\t    ‖\033[0m");
-        self::println("\033[32m‖ \tServer http://{$msg}\t    ‖\033[0m");
+        self::println("\033[32m‖ \tListen {$host}\t    ‖\033[0m");
         self::println("\033[32m‖ \tSite https://docs.szwtdl.cn\t    ‖\033[0m");
         self::println("\033[32m ============================================\033[0m");
         echo PHP_EOL;
@@ -82,13 +82,12 @@ class Application
                 self::echoError('暂未开放自定义服务');
                 break;
         }
-        $setting = $server->getSetting();
         switch ($command[1]) {
             case 'start':
                 if ($server->checkEnv()) {
                     return;
                 }
-                self::welcome("{$setting['http']['host']}:{$setting['http']['port']}");
+                self::welcome(self::getProtocol($server->getSetting(), $command[0]));
                 $server->start();
                 break;
             case 'stop':
@@ -107,5 +106,10 @@ class Application
             default:
                 self::echoError("use {$argv[0]} [http:start, ws:start, mqtt:start, main:start]");
         }
+    }
+
+    private static function getProtocol(array $config = [], string $name = 'http')
+    {
+        return "{$name}://{$config[$name]['host']}:{$config[$name]['port']}";
     }
 }

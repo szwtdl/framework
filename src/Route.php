@@ -85,7 +85,7 @@ class Route
                     }
                     if (is_array($routeInfo[2])) {
                         foreach ($routeInfo[2] as $item) {
-                            $args[count($args) + 1] = $item;
+                            $args[count($args) + 1] = is_numeric($item) ? (int) $item : $item;
                         }
                     }
                     $middlewares = [];

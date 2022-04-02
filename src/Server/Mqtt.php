@@ -9,10 +9,13 @@ declare(strict_types=1);
  * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
+
 namespace Szwtdl\Framework\Server;
 
+use Swoole\Coroutine\System;
+use Swoole\Event;
 use Swoole\Server;
-use Szwtdl\Framework\Application;
+use Swoole\Timer;
 use Szwtdl\Framework\Contract\ServerInterface;
 use Szwtdl\Framework\Listener;
 
@@ -30,15 +33,19 @@ class Mqtt implements ServerInterface
     {
         $this->_config = config('servers');
         $this->_MqttConfig = $this->_config['mqtt'];
-        if (is_file($this->_config['http']['settings']['pid_file'])) {
-            $this->master_pid = (int) file_get_contents($this->_config['http']['settings']['pid_file']);
+        if (is_file($this->_config['mqtt']['settings']['pid_file'])) {
+            $this->master_pid = (int)file_get_contents($this->_config['mqtt']['settings']['pid_file']);
         }
     }
 
     public function onStart(Server $server)
     {
-        Application::echoSuccess("Swoole Http Server running：mqtt://{$this->_MqttConfig['host']}:{$this->_MqttConfig['port']}");
         Listener::getInstance()->listen('start', $server);
+    }
+
+    public function getSetting()
+    {
+        return $this->_config;
     }
 
     public function onManagerStart(Server $server)
@@ -54,6 +61,10 @@ class Mqtt implements ServerInterface
     public function onReceive($server, $fd, $reactor_id, $data)
     {
         $header = $this->mqttGetHeader($data);
+        var_dump($header);
+        //mqtt 协议 3.1  type   1连接 | type 3发布 | type 8订阅 | type 14断开连接
+        //mqtt 协议 3.1.1 type  1连接 | type 3发布 | type 8订阅 | type 12断开连接
+        //mqtt 协议 5.0 type    1连接 | type 3发布 | type 8订阅 | type 12断开连接
         if ($header['type'] == 1) {
             $resp = chr(32) . chr(2) . chr(0) . chr(0);
             $this->eventConnect($header, substr($data, 2));
@@ -63,18 +74,34 @@ class Mqtt implements ServerInterface
             $topic = $this->decodeString(substr($data, $offset));
             $offset += strlen($topic) + 2;
             $msg = substr($data, $offset);
-            echo "client msg: {$topic}\n----------\n{$msg}\n";
         } elseif ($header['type'] == 8) {
             $resp = chr(32) . chr(2) . chr(0) . chr(0);
             $server->send($fd, $resp);
         }
-        echo 'received length=' . strlen($data) . "\n";
     }
 
     public function onClose($server, $fd)
     {
         echo "Client: Close.\n";
     }
+
+    public function onWorkerStart(Server $server, int $workerId)
+    {
+        Listener::getInstance()->listen('workerStart', $server, $workerId);
+    }
+
+    public function onWorkerError(Server $server, int $worker_id, int $worker_pid, int $exit_code, int $signal)
+    {
+        Listener::getInstance()->listen('workerError', $server, $worker_id, $worker_pid, $exit_code, $signal);
+    }
+
+    public function onShutdown(Server $server)
+    {
+        echo "===========onShutdown============\n";
+        @unlink($this->_config['mqtt']['settings']['pid_file']);
+        @unlink($this->_config['mqtt']['settings']['log_file']);
+    }
+
 
     public function start()
     {
@@ -88,6 +115,9 @@ class Mqtt implements ServerInterface
         } else {
             $this->_server->on('start', [$this, 'onStart']);
         }
+        $this->_server->on('workerStart', [$this, 'onWorkerStart']);
+        $this->_server->on('workerError', [$this, 'onWorkerError']);
+        $this->_server->on('shutdown', [$this, 'onShutdown']);
         foreach ($this->_MqttConfig['callbacks'] as $eventKey => $callbackItem) {
             [$class, $func] = $callbackItem;
             $this->_server->on($eventKey, [$class, $func]);
@@ -97,19 +127,45 @@ class Mqtt implements ServerInterface
 
     public function reload()
     {
+        Timer::after(100, function () {
+            System::exec('kill -USR1 ' . $this->master_pid);
+        });
+        Event::wait();
     }
 
     public function checkEnv()
     {
+        if (!empty($this->master_pid)) {
+            return true;
+        }
         return false;
     }
 
     public function stop()
     {
+        Timer::after(100, function () {
+            System::exec('kill -TERM ' . $this->master_pid);
+            unlink($this->_config['mqtt']['settings']['log_file']);
+        });
+        Event::wait();
     }
 
     public function watch()
     {
+        $init = \inotify_init();
+        $files = [];
+        read_file(dirname(APP_PATH . DIRECTORY_SEPARATOR . 'App'), $files);
+        read_file(dirname(CONFIG_PATH . DIRECTORY_SEPARATOR . 'config'), $files);
+        $files = array_merge_recursive(get_included_files(), $files);
+        foreach ($files as $file) {
+            inotify_add_watch($init, $file, IN_MODIFY);
+        }
+        swoole_event_add($init, function ($fd) {
+            $events = \inotify_read($fd);
+            if (!empty($events)) {
+                @posix_kill($this->master_pid, SIGUSR1);
+            }
+        });
     }
 
     public function decodeValue($data)
