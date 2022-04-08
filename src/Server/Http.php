@@ -20,7 +20,6 @@ use Swoole\Http\Response;
 use Swoole\Http\Server;
 use Swoole\Server as HttpServer;
 use Swoole\Timer;
-use Szwtdl\Framework\Application;
 use Szwtdl\Framework\Context;
 use Szwtdl\Framework\Contract\ServerInterface;
 use Szwtdl\Framework\Listener;
