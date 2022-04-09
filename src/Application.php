@@ -82,6 +82,9 @@ class Application
                 self::echoError('暂未开放自定义服务');
                 break;
         }
+        if (empty($command[1])) {
+            return;
+        }
         switch ($command[1]) {
             case 'start':
                 if ($server->checkEnv()) {

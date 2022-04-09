@@ -18,6 +18,7 @@ use Swoole\Exception;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server;
+use Swoole\Process;
 use Swoole\Server as HttpServer;
 use Swoole\Timer;
 use Szwtdl\Framework\Context;
@@ -190,7 +191,7 @@ class Http implements ServerInterface
 
     public function reload()
     {
-        Timer::after(100, function () {
+        Timer::after(1, function () {
             System::exec('kill -USR1 ' . $this->master_pid);
         });
         Event::wait();
@@ -198,7 +199,7 @@ class Http implements ServerInterface
 
     public function stop()
     {
-        Timer::after(100, function () {
+        Timer::after(1, function () {
             System::exec('kill -TERM ' . $this->master_pid);
             unlink($this->_config['http']['settings']['log_file']);
         });
@@ -218,7 +219,7 @@ class Http implements ServerInterface
         swoole_event_add($init, function ($fd) {
             $events = \inotify_read($fd);
             if (!empty($events)) {
-                @posix_kill($this->master_pid, SIGUSR1);
+                Process::kill($this->master_pid, SIGUSR1);
             }
         });
     }

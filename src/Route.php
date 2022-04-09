@@ -85,7 +85,7 @@ class Route
                     }
                     if (is_array($routeInfo[2])) {
                         foreach ($routeInfo[2] as $item) {
-                            $args[count($args) + 1] = is_numeric($item) ? (int) $item : $item;
+                            $args[count($args) + 1] = is_numeric($item) ? (int)$item : $item;
                         }
                     }
                     $middlewares = [];
@@ -113,6 +113,8 @@ class Route
                                 $response->setHeader('Access-Control-Allow-Headers', '*');
                                 $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
                                 return $response->end(\json_encode($handle));
+                            } elseif (is_string($handle) && $response->isWritable() || empty($handle) && $response->isWritable()) {
+                                return $response->end($handle);
                             }
                         }
                     }
@@ -125,6 +127,8 @@ class Route
                         $response->setHeader('Access-Control-Allow-Headers', '*');
                         $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
                         $response->end(\json_encode($result));
+                    } elseif (is_string($result) && $response->isWritable() || empty($result) && $response->isWritable()) {
+                        $response->end($result);
                     }
                     return $response;
                 }
@@ -138,5 +142,4 @@ class Route
             $response->end("");
         }
     }
-
 }
