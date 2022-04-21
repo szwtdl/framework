@@ -14,7 +14,6 @@ namespace Szwtdl\Framework\Server;
 
 use Swoole\Coroutine\System;
 use Swoole\Event;
-use Swoole\Exception;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server;
@@ -31,13 +30,13 @@ class Http implements ServerInterface
 {
     protected $_server;
 
-    protected $_config;
+    protected array $_config;
 
-    protected $_httpConfig;
+    protected array $_httpConfig;
 
     protected $_route;
 
-    protected $master_pid;
+    protected int $master_pid;
 
     public function __construct()
     {
@@ -50,12 +49,17 @@ class Http implements ServerInterface
         $this->_config = $config;
     }
 
-    public function getSetting()
+    /**
+     * @return array
+     */
+    public function getSetting(): array
     {
         return $this->_config;
     }
 
     /**
+     * @param HttpServer $server
+     * @return void
      * @throws \Exception
      */
     public function onStart(HttpServer $server)
@@ -64,15 +68,19 @@ class Http implements ServerInterface
     }
 
     /**
+     * @param HttpServer $server
+     * @return void
      * @throws \Exception
      */
     public function onManagerStart(HttpServer $server)
     {
-        cli_set_process_title('php bin/wtdl http:start: master');
         Listener::getInstance()->listen('managerStart', $server);
     }
 
     /**
+     * @param HttpServer $server
+     * @param int $workerId
+     * @return void
      * @throws \Exception
      */
     public function onWorkerStart(HttpServer $server, int $workerId)
@@ -82,6 +90,12 @@ class Http implements ServerInterface
     }
 
     /**
+     * @param HttpServer $server
+     * @param int $worker_id
+     * @param int $worker_pid
+     * @param int $exit_code
+     * @param int $signal
+     * @return void
      * @throws \Exception
      */
     public function onWorkerError(HttpServer $server, int $worker_id, int $worker_pid, int $exit_code, int $signal)
@@ -90,6 +104,9 @@ class Http implements ServerInterface
     }
 
     /**
+     * @param HttpServer $server
+     * @param int $workerId
+     * @return void
      * @throws \Exception
      */
     public function onSimpleWorkerStart(HttpServer $server, int $workerId)
@@ -98,6 +115,10 @@ class Http implements ServerInterface
         Listener::getInstance()->listen('simpleWorkerStart', $server, $workerId);
     }
 
+    /**
+     * @param HttpServer $server
+     * @return void
+     */
     public function onShutdown(HttpServer $server)
     {
         echo "===========onShutdown============\n";
@@ -106,7 +127,9 @@ class Http implements ServerInterface
     }
 
     /**
-     * @throws Exception
+     * @param Request $request
+     * @param Response $response
+     * @return mixed|void
      */
     public function onRequest(Request $request, Response $response)
     {
@@ -148,7 +171,10 @@ class Http implements ServerInterface
         $this->_route->dispatch($server, $fd, $data);
     }
 
-    public function checkEnv()
+    /**
+     * @return bool
+     */
+    public function checkEnv(): bool
     {
         if (!empty($this->master_pid)) {
             return true;

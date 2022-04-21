@@ -28,7 +28,7 @@ class Helper
     public static function getInstance()
     {
         if (is_null(self::$instance)) {
-            self::$instance = new self();
+            self::$instance = new static();
         }
         return self::$instance;
     }

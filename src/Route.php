@@ -14,6 +14,8 @@ namespace Szwtdl\Framework;
 
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
+use Swoole\Http\Request;
+use Swoole\Http\Response;
 use RuntimeException;
 use function FastRoute\simpleDispatcher;
 
@@ -53,7 +55,7 @@ class Route
         return self::$instance;
     }
 
-    public function dispatch($request, $response)
+    public function dispatch(Request $request, Response $response)
     {
         $httpMethod = $request->server['request_method'];
         $uri = $request->server['request_uri'] ?? '/';
@@ -83,14 +85,19 @@ class Route
                         $response->end("Route class {$className}->{$action} not");
                         break;
                     }
+                    //判断路由参数
                     if (is_array($routeInfo[2])) {
                         foreach ($routeInfo[2] as $item) {
                             $args[count($args) + 1] = is_numeric($item) ? (int)$item : $item;
                         }
                     }
                     $middlewares = [];
-                    foreach (self::$config as $route) {
-                        if ($route[2] == $routeInfo[1] && is_array($route[3])) {
+                    //筛选中间件
+                    foreach (self::$routes as $route) {
+                        if ($route[2] == $routeInfo[1] && isset($route[3])) {
+                            if (!is_array($route[3])) {
+                                continue;
+                            }
                             $tmp = array_values($route[3]);
                             foreach ($tmp as $value) {
                                 if (!isset(self::$middlewares[$value])) {
@@ -104,6 +111,7 @@ class Route
                     }
                     $middlewareHandler = function ($request, $response) {
                     };
+                    //如果中间件存在就挨个执行中间件
                     if (!empty($middlewares) && is_array($middlewares)) {
                         foreach ($middlewares as $middleware) {
                             $handle = (new $middleware)->handle($request, $response, $middlewareHandler);
@@ -111,9 +119,9 @@ class Route
                                 $response->setHeader('Access-Control-Allow-Origin', '*');
                                 $response->setHeader('Access-Control-Expose-Headers', '*');
                                 $response->setHeader('Access-Control-Allow-Headers', '*');
-                                $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
+                                $response->setHeader('Content-Type', 'application/json; charset=UTF-8');
                                 return $response->end(\json_encode($handle));
-                            } elseif (is_string($handle) && $response->isWritable() || empty($handle) && $response->isWritable()) {
+                            } elseif (is_string($handle) && $response->isWritable()) {
                                 return $response->end($handle);
                             }
                         }
@@ -125,7 +133,7 @@ class Route
                         $response->setHeader('Access-Control-Allow-Origin', '*');
                         $response->setHeader('Access-Control-Expose-Headers', '*');
                         $response->setHeader('Access-Control-Allow-Headers', '*');
-                        $response->setHeader('Content-Type', 'application/json;charset=UTF-8');
+                        $response->setHeader('Content-Type', 'application/json; charset=UTF-8');
                         $response->end(\json_encode($result));
                     } elseif (is_string($result) && $response->isWritable() || empty($result) && $response->isWritable()) {
                         $response->end($result);

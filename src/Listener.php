@@ -29,12 +29,18 @@ class Listener
     public static function getInstance()
     {
         if (is_null(self::$instance)) {
-            self::$instance = new self();
+            self::$instance = new static();
             self::$config = Config::getInstance()->get('listeners');
         }
         return self::$instance;
     }
 
+    /**
+     * @param $listener
+     * @param ...$args
+     * @return void
+     * @throws Exception
+     */
     public function listen($listener, ...$args)
     {
         $listeners = isset(self::$config[$listener]) ? self::$config[$listener] : [];
@@ -42,7 +48,7 @@ class Listener
             [$class, $func] = array_shift($listeners);
             try {
                 $class::getInstance()->{$func}(...$args);
-            } catch (Exception $exception) {
+            } catch (\Throwable $exception) {
                 throw new Exception($exception->getMessage());
             }
         }

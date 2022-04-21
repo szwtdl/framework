@@ -14,8 +14,9 @@ namespace Szwtdl\Framework;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
+use Swoole\Http\Request as SwRequest;
 
-class Request implements ServerRequestInterface
+class Request extends SwRequest implements ServerRequestInterface
 {
     public function getProtocolVersion()
     {

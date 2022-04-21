@@ -13,8 +13,9 @@ namespace Szwtdl\Framework;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
+use Swoole\Http\Response as SwResponse;
 
-class Response implements ResponseInterface
+class Response extends SwResponse implements ResponseInterface
 {
     public function getProtocolVersion()
     {
