@@ -9,22 +9,26 @@ declare(strict_types=1);
  * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
-
-namespace Szwtdl\Framework;
-
-use Szwtdl\Framework\Server\Http;
-use Szwtdl\Framework\Server\Mqtt;
-use Szwtdl\Framework\Server\WebSocket;
+namespace Framework;
 
 class Application
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '0.0.1';
 
-    public static $route;
-
-    public static function version()
+    /**
+     * 获取服务
+     * @param $name
+     * @param $arguments
+     * @throws \Exception
+     * @return mixed
+     */
+    public static function __callStatic($name, $arguments)
     {
-        return self::VERSION;
+        $className = '\\Framework\\Server\\' . ucfirst($name);
+        if (! class_exists($className)) {
+            throw new \Exception('ClassName:' . $className);
+        }
+        return new $className(...$arguments);
     }
 
     public static function println($strings)
@@ -36,9 +40,9 @@ class Application
     {
         echo "\033[32m\t                   _      _ _ 
 \t ___ ______      _| |_ __| | |
-\t/ __|_  /\ \ /\ / / __/ _` | |
-\t\__ \/ /  \ V  V /| || (_| | |
-\t|___/___|  \_/\_/  \__\__,_|_|\033[0m\n";
+\t/ __|_  /\\ \\ /\\ / / __/ _` | |
+\t\\__ \\/ /  \\ V  V /| || (_| | |
+\t|___/___|  \\_/\\_/  \\__\\__,_|_|\033[0m\n";
         self::println("\033[32m ============================================\033[0m");
         self::println("\033[32m‖ \tSwoole " . swoole_version() . "\t\t\t    ‖\033[0m");
         self::println("\033[32m‖ \tFramework " . self::VERSION . "\t\t\t    ‖\033[0m");
@@ -58,61 +62,20 @@ class Application
         self::println('[' . date('Y-m-d H:i:s') . '] [ERROR] ' . "\033[31m{$msg}\033[0m");
     }
 
-    public static function run()
+    public function run()
     {
         global $argv;
         $count = count($argv);
         $funcName = $argv[$count - 1];
         $command = explode(':', $funcName);
-        $className = new \stdClass();
+        $service = $command[0];
         switch ($command[0]) {
             case 'http':
-                $className = Http::class;
-                $server = new $className();
-                break;
-            case 'ws':
-                $className = WebSocket::class;
-                $server = new $className();
-                break;
-            case 'mqtt':
-                $className = Mqtt::class;
-                $server = new $className();
-                break;
-            default:
-                self::echoError('暂未开放自定义服务');
-                break;
-        }
-        if (empty($command[1])) {
-            return;
-        }
-        switch ($command[1]) {
-            case 'start':
-                if ($server->checkEnv()) {
-                    return;
-                }
-                self::welcome(self::getProtocol($server->getSetting(), $command[0]));
-                $server->start();
-                break;
-            case 'stop':
-                if ($server->checkEnv()) {
-                    $server->stop();
+                $serve = self::$service();
+                if (in_array($command[1], ['start', 'reload', 'stop'])) {
+                    $serve->start();
                 }
                 break;
-            case 'reload':
-                if ($server->checkEnv()) {
-                    $server->reload();
-                }
-                break;
-            case 'watch':
-                $server->watch();
-                break;
-            default:
-                self::echoError("use {$argv[0]} [http:start, ws:start, mqtt:start, main:start]");
         }
-    }
-
-    private static function getProtocol(array $config = [], string $name = 'http')
-    {
-        return "{$name}://{$config[$name]['host']}:{$config[$name]['port']}";
     }
 }

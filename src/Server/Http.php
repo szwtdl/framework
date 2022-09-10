@@ -9,244 +9,89 @@ declare(strict_types=1);
  * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
+namespace Framework\Server;
 
-namespace Szwtdl\Framework\Server;
-
-use Swoole\Coroutine\System;
-use Swoole\Event;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
-use Swoole\Http\Server;
-use Swoole\Process;
-use Swoole\Server as HttpServer;
-use Swoole\Timer;
-use Szwtdl\Framework\Context;
-use Szwtdl\Framework\Contract\ServerInterface;
-use Szwtdl\Framework\Listener;
-use Szwtdl\Framework\Route;
-use Szwtdl\Framework\SimpleRoute;
+use Swoole\Http\Server as HttpServer;
 
-class Http implements ServerInterface
+class Http
 {
-    protected $_server;
+    public const port = 9501;
 
-    protected array $_config;
+    protected HttpServer $http;
 
-    protected array $_httpConfig;
-
-    protected $_route;
-
-    protected int $master_pid;
-
-    public function __construct()
+    public function __construct(array $config = [])
     {
-        @session_start();
-        $config = config('servers');
-        $this->_httpConfig = $config['http'];
-        if (is_file($config['http']['settings']['pid_file'])) {
-            $this->master_pid = (int)file_get_contents($config['http']['settings']['pid_file']);
-        }
-        $this->_config = $config;
+        $this->http = new HttpServer($config['host'] ?? '0.0.0.0', $config['port'] ?? self::port, SWOOLE_PROCESS, SWOOLE_SOCK_TCP);
     }
 
-    /**
-     * @return array
-     */
-    public function getSetting(): array
+    public function start()
     {
-        return $this->_config;
+        $this->http->on('workerStart', [$this, 'onWorkerStart']);
+        $this->http->on('workerError', [$this, 'onWorkerError']);
+        $this->http->on('shutdown', [$this, 'onShutdown']);
+        $this->http->on('request', [$this, 'onRequest']);
+        $this->http->set([
+            'daemonize' => false,
+            'worker_num' => swoole_cpu_num(),
+            'reload_async' => true,
+            'max_coroutine' => 100000,
+            'trace_flags' => SWOOLE_TRACE_ALL,
+            'log_level' => SWOOLE_LOG_TRACE,
+            'log_date_format' => '%Y-%m-%d %H:%M:%S',
+            'tcp_keepcount' => 3,
+            'tcp_keepinterval' => 2,
+            'tcp_user_timeout' => 5 * 1000, // 5秒
+            'enable_static_handler' => true,
+            'open_http_protocol' => true,
+            'open_tcp_keepalive' => false,
+            'open_http2_protocol' => true,
+            'http_compression' => true,
+            'http_compression_level' => 9,
+            'package_max_length' => 50 * 1024 * 1024,
+            'buffer_input_size' => 20 * 1024 * 1024,
+            'buffer_output_size' => 50 * 1024 * 1024, // 必须为数字
+        ]);
+        $this->http->start();
     }
 
-    /**
-     * @param HttpServer $server
-     * @return void
-     * @throws \Exception
-     */
-    public function onStart(HttpServer $server)
-    {
-        Listener::getInstance()->listen('start', $server);
-    }
-
-    /**
-     * @param HttpServer $server
-     * @return void
-     * @throws \Exception
-     */
-    public function onManagerStart(HttpServer $server)
-    {
-        Listener::getInstance()->listen('managerStart', $server);
-    }
-
-    /**
-     * @param HttpServer $server
-     * @param int $workerId
-     * @return void
-     * @throws \Exception
-     */
     public function onWorkerStart(HttpServer $server, int $workerId)
     {
-        $this->_route = Route::getInstance();
-        Listener::getInstance()->listen('workerStart', $server, $workerId);
+        echo "===========onWorkerStart======={$workerId}=====\n";
     }
 
-    /**
-     * @param HttpServer $server
-     * @param int $worker_id
-     * @param int $worker_pid
-     * @param int $exit_code
-     * @param int $signal
-     * @return void
-     * @throws \Exception
-     */
     public function onWorkerError(HttpServer $server, int $worker_id, int $worker_pid, int $exit_code, int $signal)
     {
-        Listener::getInstance()->listen('workerError', $server, $worker_id, $worker_pid, $exit_code, $signal);
+        echo "===========onWorkerError============\n";
     }
 
-    /**
-     * @param HttpServer $server
-     * @param int $workerId
-     * @return void
-     * @throws \Exception
-     */
-    public function onSimpleWorkerStart(HttpServer $server, int $workerId)
-    {
-        $this->_route = SimpleRoute::getInstance();
-        Listener::getInstance()->listen('simpleWorkerStart', $server, $workerId);
-    }
-
-    /**
-     * @param HttpServer $server
-     * @return void
-     */
     public function onShutdown(HttpServer $server)
     {
         echo "===========onShutdown============\n";
-        @unlink($this->_config['http']['settings']['pid_file']);
-        @unlink($this->_config['http']['settings']['log_file']);
     }
 
-    /**
-     * @param Request $request
-     * @param Response $response
-     * @return mixed|void
-     */
     public function onRequest(Request $request, Response $response)
     {
         if ($request->server['path_info'] == '/favicon.ico' || $request->server['request_uri'] == '/favicon.ico') {
             $response->end();
             return;
         }
-        //异常处理
         register_shutdown_function(function () use ($response) {
             $error = error_get_last();
             switch ($error['type'] ?? null) {
-                case E_ERROR :
-                case E_PARSE :
-                case E_CORE_ERROR :
-                case E_COMPILE_ERROR :
+                case E_ERROR:
+                case E_PARSE:
+                case E_CORE_ERROR:
+                case E_COMPILE_ERROR:
                     $response->status(500);
                     $response->end($error['message']);
                     break;
             }
             exit(0);
         });
-        try {
-            Context::set('request', $request);
-            Context::set('response', $response);
-            $this->_route->dispatch($request, $response);
-        } catch (\Throwable $exception) {
-            return $response->end($exception->getMessage());
-        }
-    }
-
-    /**
-     * @param $server
-     * @param $fd
-     * @param $from_id
-     * @param $data
-     */
-    public function onReceive($server, $fd, $from_id, $data)
-    {
-        $this->_route->dispatch($server, $fd, $data);
-    }
-
-    /**
-     * @return bool
-     */
-    public function checkEnv(): bool
-    {
-        if (!empty($this->master_pid)) {
-            return true;
-        }
-        return false;
-    }
-
-    public function start()
-    {
-        if (isset($this->_httpConfig['settings']['only_simple_http'])) {
-            $this->_server = new HttpServer($this->_httpConfig['host'], $this->_httpConfig['port'], $this->_config['mode']);
-            $this->_server->on('workerStart', [$this, 'onSimpleWorkerStart']);
-            $this->_server->on('receive', [$this, 'onReceive']);
-            unset($this->_httpConfig['settings']['only_simple_http']);
-        } else {
-            $this->_server = new Server($this->_httpConfig['host'], $this->_httpConfig['port'], $this->_config['mode'], $this->_httpConfig['sock_type']);
-            $this->_server->on('workerStart', [$this, 'onWorkerStart']);
-            $this->_server->on('workerError', [$this, 'onWorkerError']);
-            $this->_server->on('shutdown', [$this, 'onShutdown']);
-            $this->_server->on('request', [$this, 'onRequest']);
-        }
-        $this->_server->set($this->_httpConfig['settings']);
-        if ($this->_config['mode'] == SWOOLE_BASE) {
-            $this->_server->on('managerStart', [$this, 'onManagerStart']);
-        } else {
-            $this->_server->on('start', [$this, 'onStart']);
-        }
-        foreach ($this->_httpConfig['callbacks'] as $eventKey => $callbackItem) {
-            [$class, $func] = $callbackItem;
-            $this->_server->on($eventKey, [$class, $func]);
-        }
-        if (isset($this->_config['process']) && !empty($this->_config['process'])) {
-            foreach ($this->_config['process'] as $processItem) {
-                [$class, $func] = $processItem;
-                $this->_server->addProcess($class::$func($this->_server));
-            }
-        }
-        $this->_server->start();
-    }
-
-    public function reload()
-    {
-        Timer::after(1, function () {
-            System::exec('kill -USR1 ' . $this->master_pid);
-        });
-        Event::wait();
-    }
-
-    public function stop()
-    {
-        Timer::after(1, function () {
-            System::exec('kill -TERM ' . $this->master_pid);
-            unlink($this->_config['http']['settings']['log_file']);
-        });
-        Event::wait();
-    }
-
-    public function watch()
-    {
-        $init = \inotify_init();
-        $files = [];
-        read_file(dirname(APP_PATH . DIRECTORY_SEPARATOR . 'App'), $files);
-        read_file(dirname(CONFIG_PATH . DIRECTORY_SEPARATOR . 'config'), $files);
-        $files = array_merge_recursive(get_included_files(), $files);
-        foreach ($files as $file) {
-            inotify_add_watch($init, $file, IN_MODIFY);
-        }
-        swoole_event_add($init, function ($fd) {
-            $events = \inotify_read($fd);
-            if (!empty($events)) {
-                Process::kill($this->master_pid, SIGUSR1);
-            }
-        });
+        $response->header('Content-Type', 'text/html; charset=utf-8');
+        $response->header('Server', 'swoole');
+        $response->end('<h1>Hello Swoole</h1>');
     }
 }

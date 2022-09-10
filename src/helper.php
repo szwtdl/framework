@@ -9,8 +9,10 @@ declare(strict_types=1);
  * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
-namespace Szwtdl\Framework\Contract;
-
-interface MessageInterface
-{
+if (! function_exists('dd')) {
+    function dd($arr)
+    {
+        echo '<pre>';
+        print_r($arr);
+    }
 }

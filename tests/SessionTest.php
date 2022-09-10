@@ -9,11 +9,18 @@ declare(strict_types=1);
  * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
-namespace Szwtdl\Framework\Contract;
+namespace Tests;
 
-interface DatabaseInterface
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @internal
+ * @coversNothing
+ */
+class SessionTest extends TestCase
 {
-    public function connect();
-
-    public function query();
+    public function testLogin()
+    {
+        $this->assertTrue(true);
+    }
 }

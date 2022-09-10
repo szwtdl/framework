@@ -4,11 +4,15 @@
          colors="true"
          cacheResult="false"
          columns="max"
+         testdox="true"
+         noInteraction="true"
+         beStrictAboutTestsThatDoNotTestAnything="false"
+         beStrictAboutChangesToGlobalState="true"
+         enforceTimeLimit="true"
+         timeoutForLargeTests="60"
          bootstrap="vendor/autoload.php">
-
     <testsuite name="money">
         <directory suffix="Test.php">./tests</directory>
-        <file>tests/DemoTest.php</file>
     </testsuite>
 
 </phpunit>

@@ -1,43 +1,44 @@
 <?php
 
+declare(strict_types=1);
+/**
+ * 深圳网通动力网络技术有限公司
+ * This file is part of szwtdl/framework.
+ * @link     https://www.szwtdl.cn
+ * @document https://wiki.szwtdl.cn
+ * @contact  szpengjian@gmail.com
+ * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
+ */
 namespace Tests;
 
 use PHPUnit\Framework\TestCase;
-use Szwtdl\Framework\Uploads;
-use Szwtdl\Framework\UploadsInterface;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class DemoTest extends TestCase
 {
-
-    public function testUser()
+    public function testRun()
     {
         $this->assertTrue(true);
     }
 
-    public function testFile(): array
+    public function testData(): array
     {
-        $this->assertTrue(true);
-        return [
-            'name' => '2012-04-20 21.13.42.jpg',
-            'tmp_name' => 'C:\wamp\tmp\php8D20.tmp',
-            'type' => 'image/jpeg',
-            'size' => 1472190,
-            'error' => 0
-        ];
+        $data = [];
+        for ($i = 0; $i < 100; ++$i) {
+            $data[$i] = mt_rand(1000, 9999);
+        }
+        $this->assertIsArray($data);
+        return $data;
     }
 
     /**
-     * @depends testFile
+     * @depends testData
      */
-    public function testUpload(array $data)
+    public function testBox(array $data)
     {
-        $upload = new Uploads();
-        $this->assertInstanceOf(UploadsInterface::class, $upload);
-        $this->assertEquals(['name' => '2012-04-20 21.13.42.jpg',
-            'tmp_name' => 'C:\wamp\tmp\php8D20.tmp',
-            'type' => 'image/jpeg',
-            'size' => 1472190,
-            'error' => 0], $data);
+        $this->assertSame(100, count($data));
     }
-
 }
