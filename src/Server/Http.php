@@ -11,32 +11,27 @@ declare(strict_types=1);
  */
 namespace Framework\Server;
 
+use Framework\Route;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 use Swoole\Http\Server as HttpServer;
 
 class Http
 {
-    public const port = 9501;
+    protected $_route;
 
     protected HttpServer $http;
 
-    public function __construct(array $config = [])
-    {
-        $this->http = new HttpServer($config['host'] ?? '0.0.0.0', $config['port'] ?? self::port, SWOOLE_PROCESS, SWOOLE_SOCK_TCP);
-    }
-
-    public function start()
-    {
-        $this->http->on('workerStart', [$this, 'onWorkerStart']);
-        $this->http->on('workerError', [$this, 'onWorkerError']);
-        $this->http->on('shutdown', [$this, 'onShutdown']);
-        $this->http->on('request', [$this, 'onRequest']);
-        $this->http->set([
+    protected array $options = [
+        'host' => '0.0.0.0',
+        'port' => 9501,
+        'mode' => SWOOLE_PROCESS,
+        'sock_type' => SWOOLE_SOCK_TCP,
+        'callbacks' => [],
+        'settings' => [
             'daemonize' => false,
-            'worker_num' => swoole_cpu_num(),
             'reload_async' => true,
-            'max_coroutine' => 100000,
+            'max_coroutine' => 10000,
             'trace_flags' => SWOOLE_TRACE_ALL,
             'log_level' => SWOOLE_LOG_TRACE,
             'log_date_format' => '%Y-%m-%d %H:%M:%S',
@@ -52,12 +47,28 @@ class Http
             'package_max_length' => 50 * 1024 * 1024,
             'buffer_input_size' => 20 * 1024 * 1024,
             'buffer_output_size' => 50 * 1024 * 1024, // 必须为数字
-        ]);
+        ],
+    ];
+
+    public function __construct(array $config = [])
+    {
+        $this->options = array_merge($this->options, $config);
+        $this->http = new HttpServer($this->options['host'], $this->options['port'], $this->options['mode'], $this->options['sock_type']);
+    }
+
+    public function start()
+    {
+        $this->http->on('workerStart', [$this, 'onWorkerStart']);
+        $this->http->on('workerError', [$this, 'onWorkerError']);
+        $this->http->on('shutdown', [$this, 'onShutdown']);
+        $this->http->on('request', [$this, 'onRequest']);
+        $this->http->set($this->options['settings']);
         $this->http->start();
     }
 
     public function onWorkerStart(HttpServer $server, int $workerId)
     {
+        $this->_route = Route::getInstance();
         echo "===========onWorkerStart======={$workerId}=====\n";
     }
 
@@ -73,6 +84,7 @@ class Http
 
     public function onRequest(Request $request, Response $response)
     {
+        $response->header('Server', 'nginx/12.1');
         if ($request->server['path_info'] == '/favicon.ico' || $request->server['request_uri'] == '/favicon.ico') {
             $response->end();
             return;
@@ -90,8 +102,6 @@ class Http
             }
             exit(0);
         });
-        $response->header('Content-Type', 'text/html; charset=utf-8');
-        $response->header('Server', 'swoole');
-        $response->end('<h1>Hello Swoole</h1>');
+        $this->_route->dispatch($request, $response);
     }
 }

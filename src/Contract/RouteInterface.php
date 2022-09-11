@@ -9,10 +9,18 @@ declare(strict_types=1);
  * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
-if (! function_exists('dd')) {
-    function dd($arr)
-    {
-        echo '<pre>';
-        print_r($arr) . PHP_EOL;
-    }
+
+namespace Framework\Contract;
+
+interface RouteInterface
+{
+    public function get($url, $action);
+
+    public function post($url, $action);
+
+    public function any($url, $action);
+
+    public function patch($url, $action);
+
+    public function prefix($url);
 }

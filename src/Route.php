@@ -11,6 +11,7 @@ declare(strict_types=1);
  */
 namespace Framework;
 
+use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -22,11 +23,9 @@ class Route
 
     private static $routes = [];
 
-    private static $config;
-
     private static $dispatcher;
 
-    private static $middlewares = [];
+    private static array $middlewares = ['web'];
 
     private function __construct()
     {
@@ -53,6 +52,20 @@ class Route
         $httpMethod = $request->server['request_method'];
         $uri = $request->server['request_uri'] ?? '/';
         $routeInfo = self::$dispatcher->dispatch($httpMethod, $uri);
-        dd($routeInfo);
+        switch ($routeInfo[0]) {
+            case Dispatcher::NOT_FOUND:
+                $response->header('Content-Type', 'text/plain');
+//                $response->status(404);
+                $response->end('<h1>Hello Swoole</h1>');
+                break;
+            case Dispatcher::METHOD_NOT_ALLOWED:
+                $response->end('method ' . $httpMethod . ' empty');
+                break;
+            case Dispatcher::FOUND:
+                $response->header('Content-Type', 'text/plain');
+                $response->end('<h1>Hello Swoole. #' . rand(1000, 9999) . '</h1>');
+                break;
+        }
     }
+
 }

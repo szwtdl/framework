@@ -9,27 +9,12 @@ declare(strict_types=1);
  * @contact  szpengjian@gmail.com
  * @license  https://github.com/szwtdl/framework/blob/master/LICENSE
  */
+
 namespace Framework;
 
 class Application
 {
     public const VERSION = '0.0.1';
-
-    /**
-     * 获取服务
-     * @param $name
-     * @param $arguments
-     * @throws \Exception
-     * @return mixed
-     */
-    public static function __callStatic($name, $arguments)
-    {
-        $className = '\\Framework\\Server\\' . ucfirst($name);
-        if (! class_exists($className)) {
-            throw new \Exception('ClassName:' . $className);
-        }
-        return new $className(...$arguments);
-    }
 
     public static function println($strings)
     {
@@ -62,18 +47,23 @@ class Application
         self::println('[' . date('Y-m-d H:i:s') . '] [ERROR] ' . "\033[31m{$msg}\033[0m");
     }
 
+
     public function run()
     {
         global $argv;
         $count = count($argv);
         $funcName = $argv[$count - 1];
         $command = explode(':', $funcName);
-        $service = $command[0];
+        $serve = ServerFactory::getInstance($command[0]);
         switch ($command[0]) {
             case 'http':
-                $serve = self::$service();
                 if (in_array($command[1], ['start', 'reload', 'stop'])) {
-                    $serve->start();
+                    $serve->{$command[1]}();
+                }
+                break;
+            case 'mqtt':
+                if (in_array($command[1], ['start', 'reload'])) {
+                    $serve->{$command[1]}();
                 }
                 break;
         }
